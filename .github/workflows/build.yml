@@ -1,35 +1,36 @@
-name: Java CI with Maven
+name: CI/CD Pipeline
 
-on:
-  push:
-    branches:
-      - master
+on: [push]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: Set up JDK 21
+      - name: Set up JDK 11
         uses: actions/setup-java@v1
         with:
-          java-version: '21.0.2'
+          java-version: '11'
 
-      - name: Install Maven 3.9.9
+      - name: Cache Maven packages
+        uses: actions/cache@v2
+        with:
+          path: \~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Check for POM file
+        id: check-pom
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget
-          wget https://downloads.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz
-          tar -xvzf apache-maven-3.9.9-bin.tar.gz -C /opt
-          sudo ln -s /opt/apache-maven-3.9.9 /opt/maven
-          sudo ln -s /opt/maven/bin/mvn /usr/bin/mvn
-          # 检查Maven是否安装成功
-          mvn -version
+          if [ ! -f "pom.xml" ]; then
+            echo "Error: pom.xml not found in the project directory."
+            exit 1
+          fi
 
       - name: Build with Maven
-        run: mvn clean test
-        env:
-          MAVEN_OPTS: "-Xmx1024m -XX:+UseStringDeduplication"
+        run: mvn clean install
+
+      - name: Run tests
+        run: mvn test

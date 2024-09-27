@@ -1,0 +1,38 @@
+name: Java CI with Maven
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v1
+        with:
+          java-version: '21.0.2'
+
+      - name: Install Maven 3.9.9
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget https://downloads.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz
+          tar -xvzf apache-maven-3.9.9-bin.tar.gz
+          sudo mv apache-maven-3.9.9 /opt/maven
+          sudo ln -s /opt/maven/bin/mvn /usr/bin/mvn
+          # 检查Maven是否安装成功
+          mvn -version
+
+      - name: Build with Maven
+        run: mvn clean test
+        env:
+          MAVEN_OPTS: "-Xmx1024m -XX:+UseStringDeduplication"
+        # 捕获任何错误输出
+        outputs:
+          stderr: {'$': 'steps.build.outputs.stderr'}
